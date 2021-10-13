@@ -22,5 +22,6 @@
   <depend>tf</depend>
   <depend>diagnostic_updater</depend>
   <depend>rtcm_msgs</depend>
+  <depend>gps_common</depend>
 
 </package>

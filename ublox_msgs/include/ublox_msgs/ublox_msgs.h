@@ -112,6 +112,8 @@
 
 #include <ublox_msgs/TimTM2.h>
 
+#include <ublox_msgs/DsIMU.h>
+
 namespace ublox_msgs {
 
 namespace Class {
@@ -150,6 +152,7 @@ namespace Class {
   static const uint8_t SEC = 0x27; //!< Security Feature Messages
   static const uint8_t HNR = 0x28; //!< High Rate Navigation Results Messages: 
                                    //!< High rate time, position, speed, heading
+  static const uint8_t DS = 0xC4;  //!< Dataspeed Messages
   static const uint8_t RTCM = 0xF5; //!< RTCM Configuration Messages
 }
 
@@ -257,6 +260,10 @@ namespace Message {
 
   namespace TIM {
     static const uint8_t TM2 = TimTM2::MESSAGE_ID;
+  }
+
+  namespace DS {
+    static const uint8_t IMU = DsIMU::MESSAGE_ID;
   }
 }
 

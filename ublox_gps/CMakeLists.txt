@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   diagnostic_updater
   rtcm_msgs
   nmea_msgs
+  gps_common
 )
 
 catkin_package(

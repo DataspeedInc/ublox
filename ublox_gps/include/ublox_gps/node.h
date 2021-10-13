@@ -51,6 +51,7 @@
 #include <sensor_msgs/TimeReference.h>
 #include <sensor_msgs/Imu.h>
 #include <nmea_msgs/Sentence.h>
+#include <nav_msgs/Odometry.h>
 // Other U-Blox package includes
 #include <ublox_msgs/ublox_msgs.h>
 // Ublox GPS includes
@@ -1376,6 +1377,48 @@ class HpPosRecProduct: public virtual HpgRefProduct {
 
   //! Last relative position (used for diagnostic updater)
   ublox_msgs::NavRELPOSNED9 last_rel_pos_;
+};
+
+/**
+ *  @brief TODO
+ */
+class DataspeedProduct : public HpPosRecProduct {
+  /**
+   * @brief Subscribe to Rover messages, such as NavRELPOSNED.
+   */
+  void subscribe();
+
+ protected:
+
+  /**
+   * @brief TODO
+   * @param m UBX message structure
+   */
+  void callbackNavHpPosLlh(const ublox_msgs::NavHPPOSLLH& m);
+
+  /**
+   * @brief TODO
+   * @param m UBX message structure
+   */
+  void callbackNavVelNed(const ublox_msgs::NavVELNED& m);
+
+  /**
+   * @brief Publish a sensor_msgs/Imu message upon receiving a DSIMU UBX message
+   * @param m UBX message structure
+   */
+  void callbackDsImu(const ublox_msgs::DsIMU& m);
+
+  /**
+   * @brief TODO
+   */
+  void publishOdom();
+
+ protected:
+  uint32_t odom_itow_ = 0;
+  sensor_msgs::Imu imu_msg_;
+  ublox_msgs::NavHPPOSLLH last_hpposllh_;
+  ublox_msgs::NavVELNED last_velned_;
+  ublox_msgs::DsIMU last_imu_;
 };
 
 /**

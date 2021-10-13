@@ -28,6 +28,7 @@
 //==============================================================================
 
 #include "ublox_gps/node.h"
+#include <gps_common/conversions.h>
 #include <cmath>
 #include <string>
 #include <sstream>
@@ -411,7 +412,9 @@ void UbloxNode::processMonVer() {
         boost::split(strs, extension[i], boost::is_any_of("="));
         if(strs.size() > 1) {
           if (strs[0].compare(std::string("FWVER")) == 0) {
-            if(strs[1].length() > 8)
+            if (strs[1].compare(std::string("HPG Dataspeed")) == 0)
+              components_.push_back(ComponentPtr(new DataspeedProduct));
+            else if(strs[1].length() > 8)
               addProductInterface(strs[1].substr(0, 3), strs[1].substr(8, 10));
             else
               addProductInterface(strs[1].substr(0, 3));
@@ -1821,6 +1824,124 @@ void HpPosRecProduct::callbackNavRelPosNed(const ublox_msgs::NavRELPOSNED9 &m) {
 
   last_rel_pos_ = m;
   updater->update();
+}
+
+//
+// Dataspeed
+//
+void DataspeedProduct::subscribe() {
+  HpPosRecProduct::subscribe();
+
+  // Dataspeed messages
+  nh->param("publish/ds/all", enabled["ds"], enabled["all"]);
+  nh->param("publish/ds/odom", enabled["ds_odom"], enabled["ds"]);
+  nh->param("publish/ds/imu", enabled["ds_imu"], enabled["ds"]);
+  if (enabled["ds_imu"] || enabled["ds_odom"])
+    gps.subscribe<ublox_msgs::DsIMU>(boost::bind(
+        &DataspeedProduct::callbackDsImu, this, _1), kSubscribeRate);
+  if (enabled["ds_odom"]) {
+    gps.subscribe<ublox_msgs::NavHPPOSLLH>(boost::bind(
+        &DataspeedProduct::callbackNavHpPosLlh, this, _1));
+    gps.subscribe<ublox_msgs::NavVELNED>(boost::bind(
+        &DataspeedProduct::callbackNavVelNed, this, _1));
+  }
+}
+void DataspeedProduct::publishOdom() {
+  if (enabled["ds_odom"]) {
+    static ros::Publisher odom_pub =
+        nh->advertise<nav_msgs::Odometry>("odom", kROSQueueSize);
+    if (last_hpposllh_.iTOW == last_velned_.iTOW
+     && last_hpposllh_.iTOW == last_imu_.iTOW
+     && last_hpposllh_.iTOW != odom_itow_) {
+      odom_itow_ = last_imu_.iTOW;
+
+      ///@TODO: Check last_hpposllh_.invalid_llh
+      double latitude = last_hpposllh_.lat * 1e-7 + last_hpposllh_.latHp * 1e-9;
+      double longitude = last_hpposllh_.lon * 1e-7 + last_hpposllh_.lonHp * 1e-9;
+      double utm_x;
+      double utm_y;
+      std::string utm_zone;
+      gps_common::LLtoUTM(latitude, longitude, utm_y, utm_x, utm_zone);
+      nav_msgs::Odometry odom_msg;
+      odom_msg.header.stamp = imu_msg_.header.stamp;
+      odom_msg.child_frame_id = "ins";
+      odom_msg.header.frame_id = "UTM_" + utm_zone;
+      odom_msg.pose.pose.position.x = utm_x;
+      odom_msg.pose.pose.position.y = utm_y;
+      odom_msg.pose.pose.position.z = 0.0;
+      odom_msg.pose.pose.orientation = imu_msg_.orientation; // TODO: account for convergence angle
+      odom_msg.twist.twist.linear.x = last_velned_.speed * 1e-2;
+      odom_msg.twist.twist.angular.z = imu_msg_.angular_velocity.z;
+      // TODO: populate covariance fields
+
+      odom_pub.publish(odom_msg);
+    }
+  }
+}
+void DataspeedProduct::callbackNavHpPosLlh(const ublox_msgs::NavHPPOSLLH& m) {
+  // Do not publish raw message (already published in HpPosRecProduct callback)
+  last_hpposllh_ = m;
+  publishOdom();
+}
+void DataspeedProduct::callbackNavVelNed(const ublox_msgs::NavVELNED& m) {
+  // Do not publish raw message
+  last_velned_ = m;
+  publishOdom();
+}
+void DataspeedProduct::callbackDsImu(const ublox_msgs::DsIMU& m) {
+  if (enabled["ds_imu"]) {
+    static ros::Publisher publisher =
+        nh->advertise<ublox_msgs::DsIMU>("dsimu", kROSQueueSize);
+    publisher.publish(m);
+  }
+
+  sensor_msgs::Imu imu_msg;
+  static ros::Publisher imu_pub =
+      nh->advertise<sensor_msgs::Imu>("imu", kROSQueueSize);
+
+  imu_msg.header.stamp = ros::Time::now();
+  imu_msg.header.frame_id = frame_id;
+
+  if (m.flags & 0x01) { // linear accel valid
+    imu_msg.linear_acceleration.x = m.linAccelX * 1e-7;
+    imu_msg.linear_acceleration.y = m.linAccelY * 1e-7;
+    imu_msg.linear_acceleration.z = m.linAccelZ * 1e-7;
+    imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = m.lAcc * 1e-7;
+  } else {
+    imu_msg.linear_acceleration.x = NAN;
+    imu_msg.linear_acceleration.y = NAN;
+    imu_msg.linear_acceleration.z = NAN;
+  }
+
+  if (m.flags & 0x02) { // angular vel valid
+    imu_msg.angular_velocity.x = m.angVelX * 5e-6;
+    imu_msg.angular_velocity.y = m.angVelY * 5e-6;
+    imu_msg.angular_velocity.z = m.angVelZ * 5e-6;
+    imu_msg.angular_velocity_covariance[0] = imu_msg.angular_velocity_covariance[4] = imu_msg.angular_velocity_covariance[8] = m.aAcc * 5e-6 * M_PI / 180.0;
+  } else {
+    imu_msg.angular_velocity.x = NAN;
+    imu_msg.angular_velocity.y = NAN;
+    imu_msg.angular_velocity.z = NAN;
+  }
+
+  if (m.flags & 0x04) { // orientation valid
+    imu_msg.orientation.w = m.orientationW;
+    imu_msg.orientation.x = m.orientationX;
+    imu_msg.orientation.y = m.orientationY;
+    imu_msg.orientation.z = m.orientationZ;
+    imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = m.oAcc * 1e-5 * M_PI / 180.0;
+  } else {
+    imu_msg.orientation.w = NAN;
+    imu_msg.orientation.x = NAN;
+    imu_msg.orientation.y = NAN;
+    imu_msg.orientation.z = NAN;
+  }
+
+  imu_pub.publish(imu_msg);
+
+  imu_msg_ = imu_msg;
+  last_imu_ = m;
+  publishOdom();
 }
 
 //
