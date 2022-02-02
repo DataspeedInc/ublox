@@ -1723,7 +1723,7 @@ void HpPosRecProduct::subscribe() {
   nh->param("publish/nav/hpposecef", enabled["nav_hpposecef"], enabled["nav"]);
   if (enabled["nav_hpposecef"])
     gps.subscribe<ublox_msgs::NavHPPOSECEF>(boost::bind(
-        publish<ublox_msgs::NavHPPOSECEF>, _1, "navhpposecef"), kSubscribeRate);
+        &HpPosRecProduct::callbackNavHpPosEcef, this, _1), kSubscribeRate);
 
   // Whether to publish the NavSatFix info from Nav High Precision Position LLH
   nh->param("publish/nav/hp_fix", enabled["nav_hpfix"], enabled["nav"]);
@@ -1731,10 +1731,17 @@ void HpPosRecProduct::subscribe() {
   // Whether to publish the NavSatFix info from Nav High Precision Position LLH
   nh->param("publish/nav/hpposllh", enabled["nav_hpposllh"], enabled["nav"]);
 
+  // Whether to publish the Vector3Stamped info from Nav Velocity ECEF
+  nh->param("publish/nav/velecef", enabled["nav_velecef"], enabled["nav"]);
+
   // Subscribe to Nav High Precision Position LLH
   if (enabled["nav_hpposllh"] || enabled["nav_hpfix"])
     gps.subscribe<ublox_msgs::NavHPPOSLLH>(boost::bind(
         &HpPosRecProduct::callbackNavHpPosLlh, this, _1), kSubscribeRate);
+
+  if (enabled["nav_velecef"])
+    gps.subscribe<ublox_msgs::NavVELECEF>(boost::bind(
+        &HpPosRecProduct::callbackNavVelEcef, this, _1), kSubscribeRate);
 
   // Whether to publish Nav Relative Position NED
   nh->param("publish/nav/relposned", enabled["nav_relposned"], enabled["nav"]);
@@ -1783,6 +1790,44 @@ void HpPosRecProduct::callbackNavHpPosLlh(const ublox_msgs::NavHPPOSLLH& m) {
     fix_msg.status.service = fix_msg.status.SERVICE_GPS;
     fixPublisher.publish(fix_msg);
   }
+}
+
+void HpPosRecProduct::callbackNavHpPosEcef(const ublox_msgs::NavHPPOSECEF& m) {
+  if (enabled["nav_hpposecef"]) {
+    static ros::Publisher publisher =
+        nh->advertise<ublox_msgs::NavHPPOSECEF>("navhpposecef", kROSQueueSize);
+    publisher.publish(m);
+  }
+
+  static ros::Publisher ecefPosPublisher =
+      nh->advertise<geometry_msgs::Vector3Stamped>("pos_ecef", kROSQueueSize);
+
+  geometry_msgs::Vector3Stamped ecef_pos_msg;
+  ecef_pos_msg.header.frame_id = frame_id;
+  ecef_pos_msg.header.stamp.fromSec(m.iTOW * 1e-3);
+  ecef_pos_msg.vector.x = m.ecefX * 1e-2 + m.ecefXHp * 1e-4;
+  ecef_pos_msg.vector.y = m.ecefY * 1e-2 + m.ecefYHp * 1e-4;
+  ecef_pos_msg.vector.z = m.ecefZ * 1e-2 + m.ecefZHp * 1e-4;
+  ecefPosPublisher.publish(ecef_pos_msg);
+}
+
+void HpPosRecProduct::callbackNavVelEcef(const ublox_msgs::NavVELECEF& m) {
+  if (enabled["nav_velecef"]) {
+    static ros::Publisher publisher =
+        nh->advertise<ublox_msgs::NavVELECEF>("navvelecef", kROSQueueSize);
+    publisher.publish(m);
+  }
+
+  static ros::Publisher ecefVelPublisher =
+      nh->advertise<geometry_msgs::Vector3Stamped>("vel_ecef", kROSQueueSize);
+
+  geometry_msgs::Vector3Stamped ecef_vel_msg;
+  ecef_vel_msg.header.frame_id = frame_id;
+  ecef_vel_msg.header.stamp.fromSec(m.iTOW * 1e-3);
+  ecef_vel_msg.vector.x = m.ecefVX * 1e-2;
+  ecef_vel_msg.vector.y = m.ecefVY * 1e-2;
+  ecef_vel_msg.vector.z = m.ecefVZ * 1e-2;
+  ecefVelPublisher.publish(ecef_vel_msg);
 }
 
 void HpPosRecProduct::callbackNavRelPosNed(const ublox_msgs::NavRELPOSNED9 &m) {
@@ -1899,7 +1944,7 @@ void DataspeedProduct::callbackDsImu(const ublox_msgs::DsIMU& m) {
   static ros::Publisher imu_pub =
       nh->advertise<sensor_msgs::Imu>("imu", kROSQueueSize);
 
-  imu_msg.header.stamp = ros::Time::now();
+  imu_msg.header.stamp.fromSec(m.iTOW * 1e-3);
   imu_msg.header.frame_id = frame_id;
 
   if (m.flags & 0x01) { // linear accel valid

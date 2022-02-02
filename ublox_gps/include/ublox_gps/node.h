@@ -1367,6 +1367,16 @@ class HpPosRecProduct: public virtual HpgRefProduct {
   void callbackNavHpPosLlh(const ublox_msgs::NavHPPOSLLH& m);
 
   /**
+   * @brief Publish a geometry_msgs/Vector3Stamped message upon receiving a HPPOSECEF UBX message
+   */
+  void callbackNavHpPosEcef(const ublox_msgs::NavHPPOSECEF& m);
+
+  /**
+   * @brief Publish a geometry_msgs/Vector3Stamped message upon receiving a VELECEF UBX message
+   */
+  void callbackNavVelEcef(const ublox_msgs::NavVELECEF& m);
+
+  /**
    * @brief Set the last received message and call rover diagnostic updater
    *
    * @details Publish received NavRELPOSNED messages if enabled
