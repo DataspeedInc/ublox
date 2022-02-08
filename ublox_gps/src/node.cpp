@@ -32,6 +32,7 @@
 #include <cmath>
 #include <string>
 #include <sstream>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 using namespace ublox_node;
 
@@ -1849,7 +1850,7 @@ void HpPosRecProduct::callbackNavRelPosNed(const ublox_msgs::NavRELPOSNED9 &m) {
 
     // Transform angle since ublox is representing heading as NED but ROS uses ENU as convention (REP-103).
     double heading = M_PI_2 - (static_cast<double>(m.relPosHeading) * 1e-5 / 180.0 * M_PI);
-    tf::Quaternion orientation;
+    tf2::Quaternion orientation;
     orientation.setRPY(0, 0, heading);
     imu_.orientation.x = orientation[0];
     imu_.orientation.y = orientation[1];
@@ -1908,13 +1909,27 @@ void DataspeedProduct::publishOdom() {
       std::string utm_zone;
       gps_common::LLtoUTM(latitude, longitude, utm_y, utm_x, utm_zone);
       nav_msgs::Odometry odom_msg;
-      odom_msg.header.stamp = imu_msg_.header.stamp;
+      odom_msg.header.stamp = ros::Time::now();
       odom_msg.child_frame_id = "ins";
       odom_msg.header.frame_id = "UTM_" + utm_zone;
       odom_msg.pose.pose.position.x = utm_x;
       odom_msg.pose.pose.position.y = utm_y;
       odom_msg.pose.pose.position.z = 0.0;
-      odom_msg.pose.pose.orientation = imu_msg_.orientation; // TODO: account for convergence angle
+
+      // Compute convergence angle for current position
+      int zone_number;
+      char zone_letter;
+      std::sscanf(utm_zone.c_str(), "%d%c", &zone_number, &zone_letter);
+      double central_meridian = 6 * (zone_number - 1) - 177;
+      double convergence_angle = atan(tan(M_PI / 180.0 * (longitude - central_meridian)) * sin(M_PI / 180.0 * latitude));
+
+      // Apply convergence angle correction to ENU orientation quaternion
+      tf2::Quaternion q_tf;
+      tf2::convert(imu_msg_.orientation, q_tf);
+      tf2::Quaternion conv_q(tf2::Vector3(0, 0, 1), convergence_angle);
+      q_tf = conv_q * q_tf;
+      tf2::convert(q_tf, odom_msg.pose.pose.orientation);
+
       odom_msg.twist.twist.linear.x = last_velned_.speed * 1e-2;
       odom_msg.twist.twist.angular.z = imu_msg_.angular_velocity.z;
       // TODO: populate covariance fields

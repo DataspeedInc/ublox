@@ -19,7 +19,8 @@
   <depend>nmea_msgs</depend>
   <depend>roscpp</depend>
   <depend>roscpp_serialization</depend>
-  <depend>tf</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>rtcm_msgs</depend>
   <depend>gps_common</depend>
