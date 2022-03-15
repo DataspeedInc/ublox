@@ -161,7 +161,7 @@ struct Options {
    * @brief Get the number of bytes in the header and footer.
    * @return the number of bytes in the header and footer
    */
-  int wrapper_length() {
+  uint32_t wrapper_length() {
     return header_length + checksum_length; 
   }
 };
