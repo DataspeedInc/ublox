@@ -46,8 +46,12 @@ DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::NAV, ublox_msgs::Message::NAV::DOP,
                       ublox_msgs, NavDOP)
 DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::NAV, ublox_msgs::Message::NAV::POSECEF,
                       ublox_msgs, NavPOSECEF)
+DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::NAV, ublox_msgs::Message::NAV::HPPOSECEF,
+                      ublox_msgs, NavHPPOSECEF)
 DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::NAV, ublox_msgs::Message::NAV::POSLLH,
                       ublox_msgs, NavPOSLLH)
+DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::NAV, ublox_msgs::Message::NAV::HPPOSLLH,
+                      ublox_msgs, NavHPPOSLLH)
 DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::NAV,
                       ublox_msgs::Message::NAV::RELPOSNED,
                       ublox_msgs,
@@ -203,3 +207,6 @@ DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::HNR, ublox_msgs::Message::HNR::PVT,
 DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::TIM, ublox_msgs::Message::TIM::TM2,
 		      ublox_msgs, TimTM2)
 
+// Dataspeed messages
+DECLARE_UBLOX_MESSAGE(ublox_msgs::Class::DS, ublox_msgs::Message::DS::IMU,
+		      ublox_msgs, DsIMU)

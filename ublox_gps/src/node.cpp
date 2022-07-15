@@ -66,6 +66,7 @@
 #include <ublox_gps/node.hpp>
 #include <ublox_gps/raw_data_product.hpp>
 #include <ublox_gps/tim_product.hpp>
+#include <ublox_gps/dataspeed_product.hpp>
 #include <ublox_gps/ublox_firmware6.hpp>
 #include <ublox_gps/ublox_firmware7.hpp>
 #include <ublox_gps/ublox_firmware8.hpp>
@@ -442,6 +443,11 @@ void UbloxNode::getRosParams() {
 
   this->declare_parameter("publish.tim.tm2", false);
 
+  this->declare_parameter("publish.ds.all", false);
+  this->declare_parameter("publish.ds.odom", false);
+  this->declare_parameter("publish.ds.imu", false);
+  this->declare_parameter("publish.ds.hp_fix", false);
+
   // INF parameters
   this->declare_parameter("inf.all", true);
   this->declare_parameter("inf.debug", false);
@@ -677,7 +683,9 @@ void UbloxNode::processMonVer() {
         strs = stringSplit(extensions[i], "=");
         if (strs.size() > 1) {
           if (strs[0] == "FWVER") {
-            if (strs[1].length() > 8) {
+            if (strs[1].compare(std::string("HPG Dataspeed")) == 0) {
+              components_.push_back(std::make_shared<DataspeedProduct>(nav_rate_, meas_rate_, frame_id_, updater_, rtcms_, this));
+            } else if(strs[1].length() > 8) {
               addProductInterface(strs[1].substr(0, 3), strs[1].substr(8, 10));
             } else {
               addProductInterface(strs[1].substr(0, 3));

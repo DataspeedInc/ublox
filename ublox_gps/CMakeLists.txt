@@ -26,6 +26,8 @@ find_package(tf2 REQUIRED)
 find_package(ublox_msgs REQUIRED)
 find_package(ublox_serialization REQUIRED)
 find_package(rtcm_msgs REQUIRED)
+find_package(gps_tools REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 # build node
 add_library(ublox_gps
@@ -40,6 +42,7 @@ add_library(ublox_gps
   src/raw_data_pa.cpp
   src/raw_data_product.cpp
   src/tim_product.cpp
+  src/dataspeed_product.cpp
   src/ublox_firmware.cpp
   src/ublox_firmware6.cpp
   src/ublox_firmware7.cpp
@@ -60,6 +63,8 @@ target_link_libraries(ublox_gps PUBLIC
   rclcpp_components::component
   ${rtcm_msgs_TARGETS}
   ${sensor_msgs_TARGETS}
+  "gps_tools"
+  "nav_msgs"
   ${std_msgs_TARGETS}
   tf2::tf2
   ${ublox_msgs_TARGETS}
