@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <tf2/LinearMath/Transform.h>
 
 #include <gps_tools/conversions.h>
 #include <ublox_gps/dataspeed_product.hpp>
@@ -41,7 +42,7 @@ void DataspeedProduct::publishOdom() {
     && last_hpposllh_.i_tow != odom_itow_) {
       odom_itow_ = last_imu_.i_tow;
 
-      // ///@TODO: Check last_hpposllh_.invalid_llh
+      // TODO: Check last_hpposllh_.invalid_llh
       double latitude = last_hpposllh_.lat * 1e-7 + last_hpposllh_.lat_hp * 1e-9;
       double longitude = last_hpposllh_.lon * 1e-7 + last_hpposllh_.lon_hp * 1e-9;
       double utm_x;
@@ -56,7 +57,23 @@ void DataspeedProduct::publishOdom() {
         odom_msg.pose.pose.position.x = utm_x;
         odom_msg.pose.pose.position.y = utm_y;
         odom_msg.pose.pose.position.z = 0.0;
-        odom_msg.pose.pose.orientation = imu_msg_.orientation; // TODO: account for convergence angle
+
+        // Compute convergence angle for current position
+        int zone_number;
+        char zone_letter;
+        std::sscanf(utm_zone.c_str(), "%d%c", &zone_number, &zone_letter);
+        double central_meridian = 6 * (zone_number - 1) - 177;
+        double convergence_angle = atan(tan(M_PI / 180.0 * (longitude - central_meridian)) * sin(M_PI / 180.0 * latitude));
+
+        // Apply convergence angle correction to ENU orientation quaternion
+        tf2::Quaternion q_tf(imu_msg_.orientation.x, imu_msg_.orientation.y, imu_msg_.orientation.z, imu_msg_.orientation.w);
+        tf2::Quaternion conv_q(tf2::Vector3(0, 0, 1), convergence_angle);
+        q_tf = conv_q * q_tf;
+        odom_msg.pose.pose.orientation.x = q_tf.x();
+        odom_msg.pose.pose.orientation.y = q_tf.y();
+        odom_msg.pose.pose.orientation.z = q_tf.z();
+        odom_msg.pose.pose.orientation.w = q_tf.w();
+
         odom_msg.twist.twist.linear.x = last_velned_.speed * 1e-2;
         odom_msg.twist.twist.angular.z = imu_msg_.angular_velocity.z;
         // TODO: populate covariance fields

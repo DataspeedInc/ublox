@@ -443,10 +443,10 @@ void UbloxNode::getRosParams() {
 
   this->declare_parameter("publish.tim.tm2", false);
 
-  this->declare_parameter("publish.ds.all", false);
-  this->declare_parameter("publish.ds.odom", false);
-  this->declare_parameter("publish.ds.imu", false);
-  this->declare_parameter("publish.ds.hp_fix", false);
+  this->declare_parameter("publish.ds.all", getRosBoolean(this, "publish.all"));
+  this->declare_parameter("publish.ds.odom", getRosBoolean(this, "publish.ds.all"));
+  this->declare_parameter("publish.ds.imu", getRosBoolean(this, "publish.ds.all"));
+  this->declare_parameter("publish.ds.hp_fix", getRosBoolean(this, "publish.ds.all"));
 
   // INF parameters
   this->declare_parameter("inf.all", true);
