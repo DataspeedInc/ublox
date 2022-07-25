@@ -56,7 +56,7 @@ void DataspeedProduct::publishOdom() {
         odom_msg.header.frame_id = "UTM_" + utm_zone;
         odom_msg.pose.pose.position.x = utm_x;
         odom_msg.pose.pose.position.y = utm_y;
-        odom_msg.pose.pose.position.z = 0.0;
+        odom_msg.pose.pose.position.z = last_hpposllh_.height * 1e-3 + last_hpposllh_.height_hp * 1e-4;
 
         // Compute convergence angle for current position
         int zone_number;
