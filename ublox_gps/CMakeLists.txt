@@ -52,6 +52,7 @@ target_include_directories(ublox_gps PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
   ${diagnostic_updater_INCLUDE_DIRS}
+  ${gps_tools_INCLUDE_DIRS}
 )
 target_link_libraries(ublox_gps PUBLIC
   ${asio_LIBRARIES}
@@ -63,8 +64,8 @@ target_link_libraries(ublox_gps PUBLIC
   rclcpp_components::component
   ${rtcm_msgs_TARGETS}
   ${sensor_msgs_TARGETS}
-  "gps_tools"
-  "nav_msgs"
+  ${gps_tools_LIBRARIES}
+  ${nav_msgs_TARGETS}
   ${std_msgs_TARGETS}
   tf2::tf2
   ${ublox_msgs_TARGETS}

@@ -14,6 +14,7 @@ namespace ublox_node {
 DataspeedProduct::DataspeedProduct(uint16_t nav_rate, uint16_t meas_rate, const std::string & frame_id, std::shared_ptr<diagnostic_updater::Updater> updater, std::vector<ublox_gps::Rtcm> rtcms, rclcpp::Node* node)
   : HpgRefProduct(nav_rate, meas_rate, updater, rtcms, node)
 {
+  (void)frame_id;
   if (getRosBoolean(node_, "publish.ds.odom") || getRosBoolean(node_, "publish.ds.all")) {
     odom_pub = node_->create_publisher<nav_msgs::msg::Odometry>("odom", 1);
   }
