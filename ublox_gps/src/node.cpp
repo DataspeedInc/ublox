@@ -1924,10 +1924,11 @@ void DataspeedProduct::publishOdom() {
       double convergence_angle = atan(tan(M_PI / 180.0 * (longitude - central_meridian)) * sin(M_PI / 180.0 * latitude));
 
       // Apply convergence angle correction to ENU orientation quaternion
+      tf2::Quaternion q_enu_ned = tf2::Quaternion(0.707, 0.707, 0, 0).normalized();
       tf2::Quaternion q_tf;
       tf2::convert(imu_msg_.orientation, q_tf);
       tf2::Quaternion conv_q(tf2::Vector3(0, 0, 1), convergence_angle);
-      q_tf = conv_q * q_tf;
+      q_tf = conv_q * (q_enu_ned * q_tf);
       tf2::convert(q_tf, odom_msg.pose.pose.orientation);
 
       odom_msg.twist.twist.linear.x = last_velned_.speed * 1e-2;
