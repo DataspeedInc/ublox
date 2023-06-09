@@ -38,71 +38,66 @@ void DataspeedProduct::subscribe(std::shared_ptr<ublox_gps::Gps> gps) {
 }
 
 void DataspeedProduct::publishOdom() {
-  if (last_hpposllh_.i_tow == last_velned_.i_tow
-    && last_hpposllh_.i_tow == last_imu_.i_tow
-    && last_hpposllh_.i_tow != odom_itow_) {
-      odom_itow_ = last_imu_.i_tow;
+  odom_itow_ = last_imu_.i_tow;
 
-      // TODO: Check last_hpposllh_.invalid_llh
-      double latitude = last_hpposllh_.lat * 1e-7 + last_hpposllh_.lat_hp * 1e-9;
-      double longitude = last_hpposllh_.lon * 1e-7 + last_hpposllh_.lon_hp * 1e-9;
-      double utm_x;
-      double utm_y;
-      std::string utm_zone;
-      gps_tools::LLtoUTM(latitude, longitude, utm_y, utm_x, utm_zone);
-      if (odom_pub != nullptr) {
-        nav_msgs::msg::Odometry odom_msg;
-        odom_msg.header.stamp = imu_msg_.header.stamp;
-        odom_msg.child_frame_id = "ins";
-        odom_msg.header.frame_id = "UTM_" + utm_zone;
-        odom_msg.pose.pose.position.x = utm_x;
-        odom_msg.pose.pose.position.y = utm_y;
-        odom_msg.pose.pose.position.z = last_hpposllh_.height * 1e-3 + last_hpposllh_.height_hp * 1e-4;
+  // TODO: Check last_hpposllh_.invalid_llh
+  double latitude = last_hpposllh_.lat * 1e-7 + last_hpposllh_.lat_hp * 1e-9;
+  double longitude = last_hpposllh_.lon * 1e-7 + last_hpposllh_.lon_hp * 1e-9;
+  double utm_x;
+  double utm_y;
+  std::string utm_zone;
+  gps_tools::LLtoUTM(latitude, longitude, utm_y, utm_x, utm_zone);
+  if (odom_pub != nullptr) {
+    nav_msgs::msg::Odometry odom_msg;
+    odom_msg.header.stamp = imu_msg_.header.stamp;
+    odom_msg.child_frame_id = "ins";
+    odom_msg.header.frame_id = "UTM_" + utm_zone;
+    odom_msg.pose.pose.position.x = utm_x;
+    odom_msg.pose.pose.position.y = utm_y;
+    odom_msg.pose.pose.position.z = last_hpposllh_.height * 1e-3 + last_hpposllh_.height_hp * 1e-4;
 
-        // Compute convergence angle for current position
-        int zone_number;
-        char zone_letter;
-        std::sscanf(utm_zone.c_str(), "%d%c", &zone_number, &zone_letter);
-        double central_meridian = 6 * (zone_number - 1) - 177;
-        double convergence_angle = atan(tan(M_PI / 180.0 * (longitude - central_meridian)) * sin(M_PI / 180.0 * latitude));
+    // Compute convergence angle for current position
+    int zone_number;
+    char zone_letter;
+    std::sscanf(utm_zone.c_str(), "%d%c", &zone_number, &zone_letter);
+    double central_meridian = 6 * (zone_number - 1) - 177;
+    double convergence_angle = atan(tan(M_PI / 180.0 * (longitude - central_meridian)) * sin(M_PI / 180.0 * latitude));
 
-        // Apply convergence angle correction to ENU orientation quaternion
-        tf2::Quaternion q_tf(imu_msg_.orientation.x, imu_msg_.orientation.y, imu_msg_.orientation.z, imu_msg_.orientation.w);
-        tf2::Quaternion conv_q(tf2::Vector3(0, 0, 1), convergence_angle);
-        q_tf = conv_q * q_tf;
-        odom_msg.pose.pose.orientation.x = q_tf.x();
-        odom_msg.pose.pose.orientation.y = q_tf.y();
-        odom_msg.pose.pose.orientation.z = q_tf.z();
-        odom_msg.pose.pose.orientation.w = q_tf.w();
+    // Apply convergence angle to ENU orientation quaternion to obtain UTM orientation
+    tf2::Quaternion q_ned(imu_msg_.orientation.x, imu_msg_.orientation.y, imu_msg_.orientation.z, imu_msg_.orientation.w);
+    tf2::Quaternion q_enu_ned = tf2::Quaternion(0.707, 0.707, 0, 0).normalized();
+    tf2::Quaternion conv_q(tf2::Vector3(0, 0, 1), convergence_angle);
+    auto q_utm = conv_q * q_enu_ned * q_ned;
+    odom_msg.pose.pose.orientation.x = q_utm.x();
+    odom_msg.pose.pose.orientation.y = q_utm.y();
+    odom_msg.pose.pose.orientation.z = q_utm.z();
+    odom_msg.pose.pose.orientation.w = q_utm.w();
 
-        odom_msg.twist.twist.linear.x = last_velned_.speed * 1e-2;
-        odom_msg.twist.twist.angular.z = imu_msg_.angular_velocity.z;
-        // TODO: populate covariance fields
+    odom_msg.twist.twist.linear.x = last_velned_.speed * 1e-2;
+    odom_msg.twist.twist.angular.z = imu_msg_.angular_velocity.z;
+    // TODO: populate covariance fields
 
-        odom_pub->publish(odom_msg);
-      }
+    odom_pub->publish(odom_msg);
+  }
 
-      if (fix_pub != nullptr) {
-        sensor_msgs::msg::NavSatFix fix_msg;
-        fix_msg.header.stamp = imu_msg_.header.stamp;
-        fix_msg.header.frame_id = frame_id_;
-        fix_msg.latitude = latitude;
-        fix_msg.longitude = longitude;
-        fix_msg.altitude = last_hpposllh_.height * 1e-3 + last_hpposllh_.height_hp * 1e-4;
-        fix_msg.status.status = last_hpposllh_.invalid_llh ? sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX : sensor_msgs::msg::NavSatStatus::STATUS_FIX;
-        fix_pub->publish(fix_msg);
-      }
+  if (fix_pub != nullptr) {
+    sensor_msgs::msg::NavSatFix fix_msg;
+    fix_msg.header.stamp = imu_msg_.header.stamp;
+    fix_msg.header.frame_id = frame_id_;
+    fix_msg.latitude = latitude;
+    fix_msg.longitude = longitude;
+    fix_msg.altitude = last_hpposllh_.height * 1e-3 + last_hpposllh_.height_hp * 1e-4;
+    fix_msg.status.status = last_hpposllh_.invalid_llh ? sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX : sensor_msgs::msg::NavSatStatus::STATUS_FIX;
+    fix_pub->publish(fix_msg);
   }
 }
 void DataspeedProduct::callbackNavHpPosLlh(const ublox_msgs::msg::NavHPPOSLLH& m) {
   // Do not publish raw message (already published in HpPosRecProduct callback)
   last_hpposllh_ = m;
-  publishOdom();
 }
 void DataspeedProduct::callbackNavVelNed(const ublox_msgs::msg::NavVELNED& m) {
   // Do not publish raw message
   last_velned_ = m;
-  publishOdom();
 }
 void DataspeedProduct::callbackDsImu(const ublox_msgs::msg::DsIMU& m) {
   sensor_msgs::msg::Imu imu_msg;
