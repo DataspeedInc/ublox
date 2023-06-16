@@ -2489,7 +2489,7 @@ struct UbloxSerializer<ublox_msgs::msg::NavTIMEGPS_<ContainerAllocator> > {
     stream.next(m.t_acc);
   }
 };
-  
+
 ///
 /// @brief Serializes the RxmALM message which has a repeated block.
 ///
@@ -3026,16 +3026,17 @@ struct UbloxSerializer<ublox_msgs::msg::DsIMU_<ContainerAllocator> > {
     stream.next(m.reserved0[0]);
     stream.next(m.reserved0[1]);
     stream.next(m.i_tow);
-    stream.next(m.lin_accel_x);
-    stream.next(m.lin_accel_y);
-    stream.next(m.lin_accel_z);
+    stream.next(m.raw_accel_x);
+    stream.next(m.raw_accel_y);
+    stream.next(m.raw_accel_z);
+    stream.next(m.comp_accel_x);
+    stream.next(m.comp_accel_y);
+    stream.next(m.comp_accel_z);
     stream.next(m.ang_vel_x);
     stream.next(m.ang_vel_y);
     stream.next(m.ang_vel_z);
-    stream.next(m.orientation_w);
-    stream.next(m.orientation_x);
-    stream.next(m.orientation_y);
-    stream.next(m.orientation_z);
+    stream.next(m.body_roll);
+    stream.next(m.body_pitch);
     stream.next(m.l_acc);
     stream.next(m.a_acc);
     stream.next(m.o_acc);
@@ -3054,16 +3055,17 @@ struct UbloxSerializer<ublox_msgs::msg::DsIMU_<ContainerAllocator> > {
     stream.next(m.reserved0[0]);
     stream.next(m.reserved0[1]);
     stream.next(m.i_tow);
-    stream.next(m.lin_accel_x);
-    stream.next(m.lin_accel_y);
-    stream.next(m.lin_accel_z);
+    stream.next(m.raw_accel_x);
+    stream.next(m.raw_accel_y);
+    stream.next(m.raw_accel_z);
+    stream.next(m.comp_accel_x);
+    stream.next(m.comp_accel_y);
+    stream.next(m.comp_accel_z);
     stream.next(m.ang_vel_x);
     stream.next(m.ang_vel_y);
     stream.next(m.ang_vel_z);
-    stream.next(m.orientation_w);
-    stream.next(m.orientation_x);
-    stream.next(m.orientation_y);
-    stream.next(m.orientation_z);
+    stream.next(m.body_roll);
+    stream.next(m.body_pitch);
     stream.next(m.l_acc);
     stream.next(m.a_acc);
     stream.next(m.o_acc);

@@ -63,11 +63,10 @@ void DataspeedProduct::publishOdom() {
     double central_meridian = 6 * (zone_number - 1) - 177;
     double convergence_angle = atan(tan(M_PI / 180.0 * (longitude - central_meridian)) * sin(M_PI / 180.0 * latitude));
 
-    // Apply convergence angle to ENU orientation quaternion to obtain UTM orientation
-    tf2::Quaternion q_ned(imu_msg_.orientation.x, imu_msg_.orientation.y, imu_msg_.orientation.z, imu_msg_.orientation.w);
-    tf2::Quaternion q_enu_ned = tf2::Quaternion(0.707, 0.707, 0, 0).normalized();
+    // Apply convergence angle to ENU heading to obtain UTM orientation
+    tf2::Quaternion q_enu(tf2::Vector3(0, 0, 1), (90.0 - last_velned_.heading * 1e-5) * M_PI / 180.0);
     tf2::Quaternion conv_q(tf2::Vector3(0, 0, 1), convergence_angle);
-    auto q_utm = conv_q * q_enu_ned * q_ned;
+    auto q_utm = conv_q * q_enu;
     odom_msg.pose.pose.orientation.x = q_utm.x();
     odom_msg.pose.pose.orientation.y = q_utm.y();
     odom_msg.pose.pose.orientation.z = q_utm.z();
@@ -105,9 +104,9 @@ void DataspeedProduct::callbackDsImu(const ublox_msgs::msg::DsIMU& m) {
   imu_msg.header.frame_id = "ins";
 
   if (m.flags & 0x01) { // linear accel valid
-    imu_msg.linear_acceleration.x = m.lin_accel_x * 1e-7;
-    imu_msg.linear_acceleration.y = m.lin_accel_y * 1e-7;
-    imu_msg.linear_acceleration.z = m.lin_accel_z * 1e-7;
+    imu_msg.linear_acceleration.x = m.comp_accel_x * 1e-7;
+    imu_msg.linear_acceleration.y = m.comp_accel_y * 1e-7;
+    imu_msg.linear_acceleration.z = m.comp_accel_z * 1e-7;
     imu_msg.linear_acceleration_covariance[0] = imu_msg.linear_acceleration_covariance[4] = imu_msg.linear_acceleration_covariance[8] = m.l_acc * 1e-7;
   } else {
     imu_msg.linear_acceleration.x = NAN;
@@ -127,10 +126,12 @@ void DataspeedProduct::callbackDsImu(const ublox_msgs::msg::DsIMU& m) {
   }
 
   if (m.flags & 0x04) { // orientation valid
-    imu_msg.orientation.w = m.orientation_w;
-    imu_msg.orientation.x = m.orientation_x;
-    imu_msg.orientation.y = m.orientation_y;
-    imu_msg.orientation.z = m.orientation_z;
+    tf2::Quaternion q;
+    q.setRPY(m.body_roll * M_PI / 180.0 * 1e-5, m.body_pitch * M_PI / 180.0 * 1e-5, 0.0);
+    imu_msg.orientation.w = q.w();
+    imu_msg.orientation.x = q.x();
+    imu_msg.orientation.y = q.y();
+    imu_msg.orientation.z = q.z();
     imu_msg.orientation_covariance[0] = imu_msg.orientation_covariance[4] = imu_msg.orientation_covariance[8] = m.o_acc * 1e-5 * M_PI / 180.0;
   } else {
     imu_msg.orientation.w = NAN;
