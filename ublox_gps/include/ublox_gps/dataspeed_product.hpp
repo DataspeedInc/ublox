@@ -2,6 +2,7 @@
 #define DATASPEED_PRODUCT_HPP
 
 #include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -9,6 +10,8 @@
 #include <ublox_gps/gps.hpp>
 #include <ublox_gps/hp_pos_rec_product.hpp>
 #include <ublox_gps/rtcm.hpp>
+
+#include <ublox_msgs/msg/nav_pvt.hpp>
 
 namespace ublox_node {
 
@@ -31,13 +34,19 @@ class DataspeedProduct final : public virtual HpgRefProduct {
    * @brief TODO
    * @param m UBX message structure
    */
-  void callbackNavHpPosLlh(const ublox_msgs::msg::NavHPPOSLLH& m);
+  void callbackNavPvt(const ublox_msgs::msg::NavPVT& m);
 
   /**
    * @brief TODO
    * @param m UBX message structure
    */
-  void callbackNavVelNed(const ublox_msgs::msg::NavVELNED& m);
+  void callbackNavDop(const ublox_msgs::msg::NavDOP& m);
+
+  /**
+   * @brief TODO
+   * @param m UBX message structure
+   */
+  void callbackNavTimeGps(const ublox_msgs::msg::NavTIMEGPS& m);
 
   /**
    * @brief Publish a sensor_msgs/Imu message upon receiving a DSIMU UBX message
@@ -53,8 +62,7 @@ class DataspeedProduct final : public virtual HpgRefProduct {
  protected:
   uint32_t odom_itow_ = 0;
   sensor_msgs::msg::Imu imu_msg_;
-  ublox_msgs::msg::NavHPPOSLLH last_hpposllh_;
-  ublox_msgs::msg::NavVELNED last_velned_;
+  ublox_msgs::msg::NavPVT last_pvt_;
   ublox_msgs::msg::DsIMU last_imu_;
   std::string frame_id_;
 
@@ -62,7 +70,10 @@ class DataspeedProduct final : public virtual HpgRefProduct {
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub;
   rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr fix_pub;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub;
+  rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr body_vel_pub;
   rclcpp::Publisher<ublox_msgs::msg::DsIMU>::SharedPtr ds_imu_pub;
+  rclcpp::Publisher<ublox_msgs::msg::NavDOP>::SharedPtr dop_pub;
+  rclcpp::Publisher<ublox_msgs::msg::NavTIMEGPS>::SharedPtr time_pub;
 };
 
 }  // namespace ublox_node

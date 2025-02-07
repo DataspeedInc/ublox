@@ -57,6 +57,7 @@ class UbloxFirmware7Plus : public UbloxFirmware {
     if (getRosBoolean(node_, "publish.nav.pvt")) {
       // NavPVT publisher
       nav_pvt_pub_->publish(m);
+      RCLCPP_FATAL_STREAM(node_->get_logger(), "NAV PVT message received");
     }
 
     //

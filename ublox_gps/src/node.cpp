@@ -446,7 +446,7 @@ void UbloxNode::getRosParams() {
   this->declare_parameter("publish.ds.all", getRosBoolean(this, "publish.all"));
   this->declare_parameter("publish.ds.odom", getRosBoolean(this, "publish.ds.all"));
   this->declare_parameter("publish.ds.imu", getRosBoolean(this, "publish.ds.all"));
-  this->declare_parameter("publish.ds.hp_fix", getRosBoolean(this, "publish.ds.all"));
+  this->declare_parameter("publish.ds.fix", getRosBoolean(this, "publish.ds.all"));
 
   // INF parameters
   this->declare_parameter("inf.all", true);
@@ -480,6 +480,9 @@ void UbloxNode::getRosParams() {
   }
   if (getRosBoolean(this, "publish.nav.posecef")) {
     nav_posecef_pub_ = this->create_publisher<ublox_msgs::msg::NavPOSECEF>("navposecef", 1);
+  }
+  if (getRosBoolean(this, "publish.nav.pvt")) {
+    nav_pvt_pub_ = this->create_publisher<ublox_msgs::msg::NavPVT>("navpvt", 1);
   }
   if (getRosBoolean(this, "publish.nav.cov")) {
     nav_cov_pub_ = this->create_publisher<ublox_msgs::msg::NavCOV>("navcov", 1);
@@ -548,6 +551,11 @@ void UbloxNode::subscribe() {
 
   if (getRosBoolean(this, "publish.nav.posecef")) {
     gps_->subscribe<ublox_msgs::msg::NavPOSECEF>([this](const ublox_msgs::msg::NavPOSECEF &m) { nav_posecef_pub_->publish(m); },
+                                            1);
+  }
+
+  if (getRosBoolean(this, "publish.nav.pvt")) {
+    gps_->subscribe<ublox_msgs::msg::NavPVT>([this](const ublox_msgs::msg::NavPVT &m) { nav_pvt_pub_->publish(m); },
                                             1);
   }
 

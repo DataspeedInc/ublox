@@ -264,6 +264,7 @@ class UbloxNode final : public rclcpp::Node {
 
   rclcpp::Publisher<ublox_msgs::msg::NavSTATUS>::SharedPtr nav_status_pub_;
   rclcpp::Publisher<ublox_msgs::msg::NavPOSECEF>::SharedPtr nav_posecef_pub_;
+  rclcpp::Publisher<ublox_msgs::msg::NavPVT>::SharedPtr nav_pvt_pub_;
   rclcpp::Publisher<ublox_msgs::msg::NavCLOCK>::SharedPtr nav_clock_pub_;
   rclcpp::Publisher<ublox_msgs::msg::NavCOV>::SharedPtr nav_cov_pub_;
   rclcpp::Publisher<ublox_msgs::msg::AidALM>::SharedPtr aid_alm_pub_;
